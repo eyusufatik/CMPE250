@@ -1,10 +1,10 @@
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
 public class Network {
-	private HashMap<Integer, HashMap<Integer, Integer>> map;
-	private HashMap<Integer, HashMap<Integer, Integer>> flows;
+	private HashMap<Integer, ArrayList<Edge>> map;
 	
 	// for set intersection use retainAll with a copy of the set
 	private HashSet<Integer> allTrans;
@@ -18,8 +18,7 @@ public class Network {
 	private int sinkId;
 	
 	public Network() {
-		map = new HashMap<Integer, HashMap<Integer, Integer>>();
-		flows = new HashMap<Integer, HashMap<Integer, Integer>>();
+		map = new HashMap<Integer, ArrayList<Edge>>();
 		
 		allTrans = new HashSet<Integer>();
 		greenTrans = new HashSet<Integer>();
@@ -37,12 +36,21 @@ public class Network {
 	}
 	
 	private int addVertex() {
-		map.put(id, new HashMap<Integer, Integer>());
-		flows.put(id, new HashMap<Integer, Integer>());
-		
+		map.put(id, new ArrayList<Edge>());
 		int temp = id;
 		id++;
 		return temp;
+	}
+	
+	private void addEdge(int from, int to, int capacity) {
+		Edge e1 = new Edge(from, to, capacity);
+		Edge e2 = new Edge(to, from, 0);
+		
+		e1.residual = e2;
+		e2.residual = e1;
+		
+		map.get(from).add(e1);
+		map.get(to).add(e2);
 	}
 	
 	
@@ -50,11 +58,7 @@ public class Network {
 		int transId = addVertex();
 		
 		// connect to virtual sink, the capacity of the edge is capacity of the train
-		map.get(transId).put(sinkId, capacity);
-		map.get(sinkId).put(transId, 0);
-		
-		flows.get(transId).put(sinkId, 0);
-		flows.get(sinkId).put(transId, 0);
+		addEdge(transId, sinkId, capacity);
 		
 		allTrans.add(transId);
 		
@@ -81,11 +85,7 @@ public class Network {
 		int bagId = addVertex();
 		
 		// connect to virtual source, the capacity of the edge is number of gifts the bag holds.
-		map.get(sourceId).put(bagId, noGifts);
-		map.get(bagId).put(sourceId, 0);
-		
-		flows.get(sourceId).put(bagId, 0);
-		flows.get(bagId).put(sourceId, 0);
+		addEdge(sourceId, bagId, noGifts);
 		
 		// according to the bag type connect the gift to the vehicles.
 		char bagProps[] = bagType.toCharArray();
@@ -108,13 +108,9 @@ public class Network {
 			if(bagProps[0] == 'a')
 				edgeCapacity = 1;
 			else
-				edgeCapacity = map.get(transId).get(sinkId);
+				edgeCapacity = map.get(transId).get(0).capacity;
 			
-			map.get(bagId).put(transId, edgeCapacity);
-			map.get(transId).put(bagId, 0);
-			
-			flows.get(bagId).put(transId, 0);
-			flows.get(transId).put(bagId, 0);
+			addEdge(bagId, transId, edgeCapacity);
 		}
 	}
 	
@@ -139,7 +135,7 @@ public class Network {
 	 */
 	private int bfsReturnFlow() {
 		boolean visited[] = new boolean[map.size()];
-		int parent[] = new int[map.size()];
+		Edge parent[] = new Edge[map.size()];
 		
 		ArrayDeque<Integer> queue = new ArrayDeque<Integer>();
 		visited[sourceId] = true;
@@ -150,40 +146,36 @@ public class Network {
 			if(vertex == sinkId)
 				break;
 			
-			for(int neighbour: map.get(vertex).keySet()) {
-				int cap = map.get(vertex).get(neighbour) - flows.get(vertex).get(neighbour);
+			for(Edge e: map.get(vertex)) {
+				int cap = e.getRemainingCapacity();
 				
-				if(!visited[neighbour] && cap > 0) {
-					visited[neighbour] = true;
-					parent[neighbour] = vertex;
-					queue.add(neighbour);
+				if(!visited[e.to] && cap > 0) {
+					visited[e.to] = true;
+					parent[e.to] = e;
+					queue.add(e.to);
 				}
 			}
 		}
-		if(parent[sinkId] == 0) {
+		if(parent[sinkId] == null) {
 			return 0;
 		}
 		
-		// backtrace the parents and find the bottleneck
+		// retrace the parents and find the bottleneck
 		int bottleneck = Integer.MAX_VALUE;
-		int currentVertex = sinkId;
-		while(currentVertex != sourceId) {
-			int cap = map.get(parent[currentVertex]).get(currentVertex) - flows.get(parent[currentVertex]).get(currentVertex);
+		Edge e = parent[sinkId];
+		while(e != null) {
+			int cap = e.getRemainingCapacity();
 			if(cap < bottleneck) {
 				bottleneck = cap;
 			}
-			currentVertex = parent[currentVertex];
+			e = parent[e.from];
 		}
 		
-		// backtrace again and augment the capacities
-		currentVertex = sinkId;
-		while(currentVertex != sourceId) {
-			int flow = flows.get(parent[currentVertex]).get(currentVertex);
-			int residualFlow = flows.get(currentVertex).get(parent[currentVertex]);
-			
-			flows.get(parent[currentVertex]).put(currentVertex, flow + bottleneck);
-			flows.get(currentVertex).put(parent[currentVertex], residualFlow - bottleneck);
-			currentVertex = parent[currentVertex];
+		// retrace again and augment the capacities
+		e = parent[sinkId];
+		while(e != null) {
+			e.augment(bottleneck);
+			e = parent[e.from];
 		}
 		
 		return bottleneck;
