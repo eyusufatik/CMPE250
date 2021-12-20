@@ -1,3 +1,4 @@
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -97,6 +98,75 @@ public class Network {
 			
 			map.get(bagId).put(transId, edgeCapacity);
 		}
+	}
+	
+	/**
+	 * This function implements Edmonds-Karp algorithm.
+	 * @return Max flow.
+	 */
+	public int findMaxFlow() {
+		int maxFlow = 0;
+		int curFlow = -1;
+		while(curFlow != 0) {
+			curFlow = bfsReturnFlow();
+			maxFlow += curFlow;
+		}
+		
+		return maxFlow;
+	}
+	
+	/**
+	 * Using BFS, this function finds an augmented path from source to the sink and returns the bottleneck flow.
+	 * @return Bottleneck flow.
+	 */
+	private int bfsReturnFlow() {
+		boolean visited[] = new boolean[map.size()];
+		int parent[] = new int[map.size()];
+		
+		ArrayDeque<Integer> queue = new ArrayDeque<Integer>();
+		visited[sourceId] = true;
+		queue.add(sourceId);
+		
+		while(!queue.isEmpty()) {
+			int vertex = queue.poll();
+			if(vertex == sinkId)
+				break;
+			
+			for(int neighbour: map.get(vertex).keySet()) {
+				int capacity = map.get(vertex).get(neighbour);
+				
+				if(!visited[neighbour] && capacity > 0) {
+					visited[neighbour] = true;
+					parent[neighbour] = vertex;
+					queue.add(neighbour);
+				}
+			}
+		}
+		if(parent[sinkId] == 0) {
+			return 0;
+		}
+		
+		// backtrace the parents and find the bottleneck
+		int minFlow = Integer.MAX_VALUE;
+		int currentVertex = sinkId;
+		while(currentVertex != sourceId) {
+			int capacity = map.get(parent[currentVertex]).get(currentVertex);
+			if(capacity < minFlow) {
+				minFlow = capacity;
+			}
+			currentVertex = parent[currentVertex];
+		}
+		
+		// backtrace again and augment the capacities
+		currentVertex = sinkId;
+		while(currentVertex != sourceId) {
+			int newCapacity = map.get(parent[currentVertex]).get(currentVertex) - minFlow;
+			map.get(parent[currentVertex]).put(currentVertex, newCapacity);
+			currentVertex = parent[currentVertex];
+		}
+		
+		return minFlow;
+		
 	}
 	
 	public void print() {

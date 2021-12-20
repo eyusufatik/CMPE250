@@ -10,6 +10,8 @@ public class project4main {
 		PrintStream out = new PrintStream(new File(args[1]));
 		
 		Network network = new Network();
+		int totalGifts = 0;
+		
 		
 		int noGreenRegionTrains = Integer.parseInt(in.nextLine());
 		String greenRegionTrainCapacities[] = in.nextLine().split(" ");
@@ -52,15 +54,19 @@ public class project4main {
 		}
 		
 		int noBags = Integer.parseInt(in.nextLine());
-		String bagProps[] = in.nextLine().split(" ");
-		for(int i = 0; i < noBags * 2; i+=2) {
-			String bagType = bagProps[i];
-			int noGifts = Integer.parseInt(bagProps[i+1]);
-			
-			// add bags to the network
-			network.addBag(noGifts, bagType);
+		if(noBags > 0) {
+			String bagProps[] = in.nextLine().split(" ");
+			for(int i = 0; i < noBags * 2; i+=2) {
+				String bagType = bagProps[i];
+				int noGifts = Integer.parseInt(bagProps[i+1]);
+				totalGifts += noGifts;
+				// add bags to the network
+				network.addBag(noGifts, bagType);
+			}
 		}
 		
-		network.print();
+		//network.print();
+		
+		out.print(totalGifts - network.findMaxFlow());
 	}
 }
