@@ -6,6 +6,7 @@ import java.util.Scanner;
 public class project4main {
 	public static void main(String[] args) throws FileNotFoundException {
 		
+		double time = System.currentTimeMillis();
 		Scanner in = new Scanner(new File(args[0]));
 		PrintStream out = new PrintStream(new File(args[1]));
 		
@@ -64,9 +65,10 @@ public class project4main {
 				network.addBag(noGifts, bagType);
 			}
 		}
-		
 		//network.print();
 		
 		out.print(totalGifts - network.findMaxFlow());
+		
+		System.out.print((System.currentTimeMillis() - time)/1000 + " seconds ");
 	}
 }

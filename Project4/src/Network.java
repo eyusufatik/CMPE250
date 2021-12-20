@@ -4,7 +4,7 @@ import java.util.HashSet;
 
 public class Network {
 	private HashMap<Integer, HashMap<Integer, Integer>> map;
-	
+	private HashMap<Integer, HashMap<Integer, Integer>> flows;
 	
 	// for set intersection use retainAll with a copy of the set
 	private HashSet<Integer> allTrans;
@@ -19,6 +19,8 @@ public class Network {
 	
 	public Network() {
 		map = new HashMap<Integer, HashMap<Integer, Integer>>();
+		flows = new HashMap<Integer, HashMap<Integer, Integer>>();
+		
 		allTrans = new HashSet<Integer>();
 		greenTrans = new HashSet<Integer>();
 		redTrans = new HashSet<Integer>();
@@ -36,16 +38,24 @@ public class Network {
 	
 	private int addVertex() {
 		map.put(id, new HashMap<Integer, Integer>());
+		flows.put(id, new HashMap<Integer, Integer>());
+		
 		int temp = id;
 		id++;
 		return temp;
 	}
+	
 	
 	public void addTransportation(int capacity, Vehicle vehicle, Region destination) {
 		int transId = addVertex();
 		
 		// connect to virtual sink, the capacity of the edge is capacity of the train
 		map.get(transId).put(sinkId, capacity);
+		map.get(sinkId).put(transId, 0);
+		
+		flows.get(transId).put(sinkId, 0);
+		flows.get(sinkId).put(transId, 0);
+		
 		allTrans.add(transId);
 		
 		switch(vehicle) {
@@ -72,6 +82,10 @@ public class Network {
 		
 		// connect to virtual source, the capacity of the edge is number of gifts the bag holds.
 		map.get(sourceId).put(bagId, noGifts);
+		map.get(bagId).put(sourceId, 0);
+		
+		flows.get(sourceId).put(bagId, 0);
+		flows.get(bagId).put(sourceId, 0);
 		
 		// according to the bag type connect the gift to the vehicles.
 		char bagProps[] = bagType.toCharArray();
@@ -97,6 +111,10 @@ public class Network {
 				edgeCapacity = map.get(transId).get(sinkId);
 			
 			map.get(bagId).put(transId, edgeCapacity);
+			map.get(transId).put(bagId, 0);
+			
+			flows.get(bagId).put(transId, 0);
+			flows.get(transId).put(bagId, 0);
 		}
 	}
 	
@@ -133,9 +151,9 @@ public class Network {
 				break;
 			
 			for(int neighbour: map.get(vertex).keySet()) {
-				int capacity = map.get(vertex).get(neighbour);
+				int cap = map.get(vertex).get(neighbour) - flows.get(vertex).get(neighbour);
 				
-				if(!visited[neighbour] && capacity > 0) {
+				if(!visited[neighbour] && cap > 0) {
 					visited[neighbour] = true;
 					parent[neighbour] = vertex;
 					queue.add(neighbour);
@@ -147,12 +165,12 @@ public class Network {
 		}
 		
 		// backtrace the parents and find the bottleneck
-		int minFlow = Integer.MAX_VALUE;
+		int bottleneck = Integer.MAX_VALUE;
 		int currentVertex = sinkId;
 		while(currentVertex != sourceId) {
-			int capacity = map.get(parent[currentVertex]).get(currentVertex);
-			if(capacity < minFlow) {
-				minFlow = capacity;
+			int cap = map.get(parent[currentVertex]).get(currentVertex) - flows.get(parent[currentVertex]).get(currentVertex);
+			if(cap < bottleneck) {
+				bottleneck = cap;
 			}
 			currentVertex = parent[currentVertex];
 		}
@@ -160,12 +178,15 @@ public class Network {
 		// backtrace again and augment the capacities
 		currentVertex = sinkId;
 		while(currentVertex != sourceId) {
-			int newCapacity = map.get(parent[currentVertex]).get(currentVertex) - minFlow;
-			map.get(parent[currentVertex]).put(currentVertex, newCapacity);
+			int flow = flows.get(parent[currentVertex]).get(currentVertex);
+			int residualFlow = flows.get(currentVertex).get(parent[currentVertex]);
+			
+			flows.get(parent[currentVertex]).put(currentVertex, flow + bottleneck);
+			flows.get(currentVertex).put(parent[currentVertex], residualFlow - bottleneck);
 			currentVertex = parent[currentVertex];
 		}
 		
-		return minFlow;
+		return bottleneck;
 		
 	}
 	
