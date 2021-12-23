@@ -67,7 +67,7 @@ public class project4main {
 		}
 		//network.print();
 		
-		out.print(totalGifts - network.findMaxFlow());
+		out.print(totalGifts - network.findMaxFlowWithDinic());
 		
 		System.out.print((System.currentTimeMillis() - time)/1000 + " seconds ");
 	}
