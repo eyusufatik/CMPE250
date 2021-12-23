@@ -1,6 +1,6 @@
 javac src/*.java -d bin/ --release 16
 cd bin
-for i in {0..649}
+for i in {0..9}
 do
 java project4main ../test_cases/input_$i.txt ../output.txt
     out=$(diff -w ../output.txt ../test_cases/output_$i.txt)

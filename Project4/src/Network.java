@@ -215,13 +215,9 @@ public class Network {
 		while(dinicBFS()) {
 			Arrays.fill(next, 0);
 			int flow = dinicDFS(sourceId, next, Integer.MAX_VALUE);
-			//System.out.println(flow);
 			while(flow != 0) {
 				maxFlow += flow;
-				System.out.println(flow);
 				flow = dinicDFS(sourceId, next, Integer.MAX_VALUE);
-				
-				
 			}
 		}
 		return maxFlow;
@@ -243,7 +239,7 @@ public class Network {
 	          }
 	        }
 		}
-		return level[sinkId] == -1;
+		return level[sinkId] != -1;
 	}
 	
 	private int dinicDFS(int current, int next[], int flow) {
@@ -254,10 +250,8 @@ public class Network {
 		int numEdges = map.get(current).size();
 	
 	   	for( ; next[current] < numEdges; next[current]++) {
-	   		System.out.println("here");
 		    Edge edge = map.get(current).get(next[current]);
 		    int cap = edge.getRemainingCapacity();
-		    System.out.println(cap);
 		    if (cap > 0 && level[edge.to] == level[current] + 1) {
 		
 		      int bottleNeck = dinicDFS(edge.to, next, Math.min(flow, cap));
@@ -266,7 +260,6 @@ public class Network {
 		        return bottleNeck;
 		      }
 		    }
-		    next[current]++;
 	   	}
 	    return 0;
 	}
