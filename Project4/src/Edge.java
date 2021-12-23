@@ -5,7 +5,7 @@ public class Edge {
 	public Edge residual;
 	
 	public int flow;
-	public final int capacity;
+	public int capacity;
 	
 	public Edge(int from, int to, int capacity) {
 		this.from = from;
